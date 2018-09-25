@@ -23,6 +23,12 @@ geometry makeGeometry(vertex * verts, size_t vertCount, unsigned * indices, size
 	//describe the data
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)16);
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)32);
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)48);
 
 	//unbind
 	glBindVertexArray(0);
@@ -68,6 +74,38 @@ void freeShader(shader & shad)
 	glDeleteProgram(shad.program);
 }
 
+texture makeTexture(unsigned width, unsigned height, unsigned channels, const unsigned char * pixels)
+{
+	GLenum oglFormat = 0;
+	switch (channels)
+	{
+	case 1: oglFormat = GL_RED; break;
+	case 2: oglFormat = GL_RG; break;
+	case 3: oglFormat = GL_RGB; break;
+	case 4: oglFormat = GL_RGBA; break;
+	}
+
+	texture newTex = { 0,width,height,channels };
+
+	glGenTextures(1, &newTex.handle);
+	glBindTexture(GL_TEXTURE_2D, newTex.handle);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, oglFormat, width, height, 0, oglFormat, GL_UNSIGNED_BYTE, pixels);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return newTex;
+}
+
+void freeTexture(texture & tex)
+{
+	glDeleteTextures(1, &tex.handle);
+	tex = {};
+}
+
 void draw(const shader & shad, const geometry & geo)
 {
 	glUseProgram(shad.program);
@@ -78,4 +116,16 @@ void draw(const shader & shad, const geometry & geo)
 void setUniform(const shader & shad, GLuint location, const glm::mat4 & value)
 {
 	glProgramUniformMatrix4fv(shad.program, location, 1, GL_FALSE, glm::value_ptr(value));
+}
+
+void setUniform(const shader & shad, GLuint location, const texture & value, GLuint textureSlot)
+{
+	glActiveTexture(GL_TEXTURE0 + textureSlot);
+	glBindTexture(GL_TEXTURE_2D, value.handle);
+	glProgramUniform1i(shad.program, location, textureSlot);
+}
+
+void setUniform(const shader & shad, GLuint location, const glm::vec3 & value)
+{
+	glProgramUniform3fv(shad.program, location, 1, glm::value_ptr(value));
 }
